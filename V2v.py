@@ -7,38 +7,54 @@
 # @Software: PyCharm
 import numpy as np
 import pandas as pd
+import math
+import matplotlib.pyplot as plt
+import random
 packet_num=5
-# packet_size = np.maximum(5.00,np.random.normal(10,3,packet_num))
-packet_size = np.array([  6.76064773 , 8.02054822  ,7.49886275 ,  6.70533496 , 15.0437818])
-request_need_time = np.array([10,7,14,8,9])
+packet_size = np.maximum(5.00,np.random.normal(10,1,packet_num))
+# packet_size = np.array([  6.76064773 , 8.02054822  ,7.49886275 ,  6.70533496 , 15.0437818])
+# request_need_time = np.array([10,7,14,8,9])
+request_need_time = np.random.uniform(8.0,14.0,packet_num)
 print(packet_size)
-vehicle_speed_list=[70,90,110,130,150]
+# vehicle_speed_list=[70,80,90,100,110,120,130,140,150]
+vehicle_speed_list = np.linspace(70,150,9)
 # vehicle_speed = 90 # km/h
 rsu_interval = 300 # 单位m
 vehicle_loc = np.random.uniform(-rsu_interval/2,rsu_interval/2,packet_num)
 print(vehicle_loc)
 
-upload_speed = 70 # M/s
+upload_speed = 50 # M/s
 
-def calv2v(hops,packet_size):
-    K=30
-    V=5
-    vtran_speed = 30 #M/s
+def calv2v(hops_j,packet_size,dis):
+    dis=dis/1000
+    K = 20
+    V = 5
+    vtran_speed = 30  # M/s
+    density=0.3
+    if hops_j==0:
+        consumption = packet_size * K + dis * packet_size * V/density
+        delay = packet_size/upload_speed+dis*packet_size/(vtran_speed)*density
+        return consumption,delay
+    hops = dis/density
     consumption = packet_size*K+hops*packet_size*V
     delay = packet_size/upload_speed+hops*packet_size/vtran_speed
+    # if random.random()>0.9:
+    #     consumption +=K*packet_size
+    #     delay+=packet_size/upload_speed
     return consumption,delay
 
-def calv2i(hops_j,packet_size):
-    K=30
+def calv2i(hops_j,packet_size,dis):
+    dis=dis/1000
+    K=20
     V=5
-    consumption = packet_size*K+hops_j*K*packet_size
-    delay = packet_size/upload_speed + hops_j*packet_size/upload_speed
+    consumption = (dis)*packet_size*K+hops_j*K*packet_size
+    delay = packet_size/(upload_speed/math.exp(dis)) + hops_j*packet_size/upload_speed
     return consumption,delay
 
 
 
 density=0.5
-D = 3
+D = 555
 sum_com=0
 sum_i_com=0
 sum_i_delay = 0
@@ -66,8 +82,8 @@ for vehicle_speed in vehicle_speed_list:
     for i in range(len(packet_size)):
         psize = packet_size[i]
         # print(psize)
-        iconsumption,idelay = calv2i(vehicle_loc_tmp[i],psize)
-        vconsumption,vdelay = calv2v(vehicle_loc_tmp[i]*1/density,psize)
+        iconsumption,idelay = calv2i(vehicle_loc_tmp[i],psize,dis=abs(vehicle_loc[i]))
+        vconsumption,vdelay = calv2v(vehicle_loc_tmp[i]*1/density,psize,dis=abs(rsu_interval*vehicle_loc_tmp[i]-vehicle_loc[i]))
         # print(iconsumption,idelay)
         # print(vconsumption,vdelay)
         # print("\n")
@@ -95,4 +111,10 @@ data = np.transpose(data)
 dataframe = pd.DataFrame(data,index=vehicle_speed_list,columns=['sum_com','sum_delay','sum_i_com','sum_i_delay'])
 
 print(dataframe)
-dataframe.to_csv('D:/毕设实习DATA/实习&&毕设/数据/vi.csv')
+dataframe.to_csv('D:/毕设实习DATA/实习&&毕设/数据/vi2.csv')
+dt = dataframe.loc[:,['sum_com','sum_i_com']]
+# dt.cumsum()
+dt.plot()
+dt_delay= dataframe.loc[:,['sum_delay','sum_i_delay']]
+dt_delay.plot()
+plt.show()
